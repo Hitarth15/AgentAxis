@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AXIS — AI Company OS</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0a0a0f; --bg-panel:#0f0f17; --bg-card:#13131e; --bg-hover:#1a1a28;
+    --border:rgba(255,255,255,0.06); --border-hi:rgba(255,255,255,0.14);
+    --accent:#7fffb2; --blue:#5b8fff; --red:#ff7f7f; --amber:#ffcf7f;
+    --text:#e8e8f0; --muted:#6b6b80; --dim:#2e2e44;
+    --mono:'IBM Plex Mono',monospace; --display:'Syne',sans-serif; --body:'Inter',sans-serif;
+    --r:8px; --rl:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;overflow:hidden;}
+  body{background:var(--bg);color:var(--text);font-family:var(--body);display:flex;flex-direction:column;height:100vh;}
+  body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);pointer-events:none;z-index:999;opacity:.35;}
+
+  /* TOP BAR */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 20px;height:50px;border-bottom:1px solid var(--border);background:var(--bg-panel);flex-shrink:0;gap:16px;}
+  .logo{font-family:var(--display);font-weight:800;font-size:17px;letter-spacing:.15em;color:var(--accent);display:flex;align-items:center;gap:8px;text-transform:uppercase;}
+  .logo-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .nav{display:flex;gap:3px;}
+  .nav-btn{padding:5px 13px;border-radius:20px;border:none;background:transparent;color:var(--muted);cursor:pointer;font-family:var(--mono);font-size:11px;letter-spacing:.04em;transition:all .15s;}
+  .nav-btn:hover{color:var(--text);background:var(--bg-hover);}
+  .nav-btn.active{background:rgba(127,255,178,.1);color:var(--accent);}
+  .topbar-r{display:flex;align-items:center;gap:12px;font-family:var(--mono);font-size:11px;color:var(--muted);}
+  .status-pill{display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;border:1px solid rgba(127,255,178,.2);color:var(--accent);font-size:10px;}
+  .s-dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulse 1.5s infinite;}
+  .api-pill{display:flex;align-items:center;gap:5px;padding:3px 9px;border-radius:20px;font-size:10px;cursor:pointer;}
+  .api-pill.connected{border:1px solid rgba(91,143,255,.25);color:var(--blue);}
+  .api-pill.disconnected{border:1px solid rgba(255,127,127,.25);color:var(--red);}
+
+  /* LAYOUT */
+  .main{display:flex;flex:1;overflow:hidden;min-height:0;}
+  .sidebar{width:200px;flex-shrink:0;background:var(--bg-panel);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;padding:14px 0;}
+  .sidebar::-webkit-scrollbar{width:0;}
+  .sb-section{padding:0 10px;margin-bottom:18px;}
+  .sb-label{font-family:var(--mono);font-size:9px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;padding:0 8px;margin-bottom:5px;}
+  .sb-item{display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:var(--r);cursor:pointer;transition:all .12s;font-size:12px;color:var(--muted);border:1px solid transparent;}
+  .sb-item:hover{background:var(--bg-hover);color:var(--text);}
+  .sb-item.active{background:rgba(127,255,178,.07);color:var(--accent);border-color:rgba(127,255,178,.1);}
+  .sb-badge{margin-left:auto;background:rgba(255,127,127,.15);color:var(--red);font-size:9px;font-family:var(--mono);padding:1px 5px;border-radius:10px;}
+  .sb-badge.g{background:rgba(127,255,178,.1);color:var(--accent);}
+
+  /* CONTENT */
+  .content{flex:1;overflow-y:auto;padding:18px 22px;min-width:0;}
+  .content::-webkit-scrollbar{width:3px;}
+  .content::-webkit-scrollbar-thumb{background:var(--bg-hover);}
+
+  /* VIEWS */
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* STAT CARDS */
+  .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:18px;}
+  .stat{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rl);padding:13px 15px;transition:border-color .15s;}
+  .stat:hover{border-color:var(--border-hi);}
+  .stat-top{font-size:9px;font-family:var(--mono);color:var(--muted);letter-spacing:.08em;text-transform:uppercase;margin-bottom:7px;}
+  .stat-val{font-family:var(--display);font-size:24px;font-weight:700;line-height:1;}
+  .stat-sub{font-size:10px;color:var(--muted);margin-top:3px;font-family:var(--mono);}
+  .c-g{color:var(--accent);} .c-b{color:var(--blue);} .c-r{color:var(--red);} .c-a{color:var(--amber);}
+
+  /* SECTION */
+  .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;}
+  .st{font-family:var(--display);font-size:13px;font-weight:600;color:var(--text);letter-spacing:.03em;display:flex;align-items:center;gap:7px;}
+  .st::before{content:'';width:3px;height:13px;border-radius:2px;background:var(--accent);display:inline-block;}
+  .btn{font-family:var(--mono);font-size:10px;padding:5px 11px;border-radius:20px;border:1px solid var(--border-hi);background:transparent;color:var(--muted);cursor:pointer;transition:all .15s;letter-spacing:.04em;}
+  .btn:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-p{background:rgba(127,255,178,.08);border-color:rgba(127,255,178,.25);color:var(--accent);}
+  .btn-p:hover{background:rgba(127,255,178,.15);}
+  .btn-approve{background:rgba(127,255,178,.1);border-color:rgba(127,255,178,.3);color:var(--accent);font-size:11px;padding:5px 14px;}
+  .btn-reject{background:rgba(255,127,127,.08);border-color:rgba(255,127,127,.25);color:var(--red);font-size:11px;padding:5px 14px;}
+
+  /* PROJECTS TABLE */
+  .tbl{width:100%;border-collapse:collapse;}
+  .tbl th{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);text-align:left;padding:0 11px 7px;border-bottom:1px solid var(--border);}
+  .tbl td{padding:10px 11px;font-size:12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  .tbl tr:hover td{background:var(--bg-hover);}
+  .pn{font-weight:500;color:var(--text);font-size:13px;}
+  .pd{font-size:10px;color:var(--muted);margin-top:1px;font-family:var(--mono);}
+  .tag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:9px;font-family:var(--mono);letter-spacing:.04em;}
+  .t-a{background:rgba(127,255,178,.1);color:var(--accent);border:1px solid rgba(127,255,178,.2);}
+  .t-p{background:rgba(255,207,127,.1);color:var(--amber);border:1px solid rgba(255,207,127,.2);}
+  .t-pl{background:rgba(91,143,255,.1);color:var(--blue);border:1px solid rgba(91,143,255,.2);}
+  .t-b{background:rgba(255,127,127,.1);color:var(--red);border:1px solid rgba(255,127,127,.2);}
+  .pb-o{width:100%;height:4px;background:var(--border);border-radius:4px;overflow:hidden;}
+  .pb-i{height:100%;border-radius:4px;background:var(--accent);}
+
+  /* AGENT CARDS */
+  .ag-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:11px;margin-bottom:20px;}
+  .ag-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rl);padding:15px;transition:all .15s;position:relative;overflow:hidden;}
+  .ag-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:14px 14px 0 0;}
+  .ag-g::before{background:var(--accent);} .ag-b::before{background:var(--blue);}
+  .ag-a::before{background:var(--amber);} .ag-r::before{background:var(--red);}
+  .ag-card:hover{border-color:var(--border-hi);}
+  .ag-avatar{width:36px;height:36px;border-radius:var(--r);display:flex;align-items:center;justify-content:center;font-size:17px;margin-bottom:9px;border:1px solid var(--border);}
+  .ag-name{font-family:var(--display);font-size:14px;font-weight:600;color:var(--text);margin-bottom:2px;}
+  .ag-role{font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:9px;}
+  .ag-tasks{font-size:11px;color:var(--muted);line-height:1.55;}
+  .ag-model{font-family:var(--mono);font-size:9px;color:var(--dim);margin-top:9px;padding-top:9px;border-top:1px solid var(--border);}
+  .ag-run-btn{margin-top:9px;width:100%;text-align:center;}
+
+  /* FEED */
+  .feed{display:flex;flex-direction:column;gap:7px;}
+  .fi{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--r);padding:11px 13px;display:flex;gap:10px;transition:border-color .15s;}
+  .fi:hover{border-color:var(--border-hi);}
+  .fi.alert{border-left:2px solid var(--red);}
+  .fi.success{border-left:2px solid var(--accent);}
+  .fi.info{border-left:2px solid var(--blue);}
+  .fi-icon{font-size:13px;margin-top:1px;flex-shrink:0;}
+  .fi-body{flex:1;}
+  .fi-title{font-size:12px;color:var(--text);line-height:1.4;}
+  .fi-meta{font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:2px;}
+
+  /* TASKS (draft approval) */
+  .task-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rl);padding:15px;margin-bottom:11px;transition:border-color .15s;}
+  .task-card.draft_ready{border-color:rgba(255,207,127,.25);}
+  .task-card.approved{border-color:rgba(127,255,178,.2);}
+  .task-card.rejected{border-color:rgba(255,127,127,.2);}
+  .task-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:9px;}
+  .task-title{font-size:13px;font-weight:500;color:var(--text);display:flex;gap:7px;align-items:center;}
+  .task-draft{background:var(--bg-hover);border-radius:var(--r);padding:12px;font-size:12px;color:var(--muted);line-height:1.7;max-height:260px;overflow-y:auto;margin:10px 0;white-space:pre-wrap;font-family:var(--body);}
+  .task-draft::-webkit-scrollbar{width:3px;}
+  .task-draft::-webkit-scrollbar-thumb{background:var(--border-hi);}
+  .task-actions{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
+  .feedback-input{flex:1;background:var(--bg-hover);border:1px solid var(--border-hi);border-radius:var(--r);padding:6px 10px;color:var(--text);font-family:var(--body);font-size:12px;outline:none;min-width:180px;}
+  .feedback-input:focus{border-color:var(--accent);}
+  .task-meta{font-family:var(--mono);font-size:10px;color:var(--dim);display:flex;gap:12px;flex-wrap:wrap;}
+
+  /* INTERVENTION / HURDLE */
+  .int-card{background:var(--bg-card);border:1px solid rgba(255,127,127,.12);border-radius:var(--rl);padding:13px 15px;margin-bottom:9px;}
+  .int-card.amber{border-color:rgba(255,207,127,.12);}
+  .int-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+  .int-title{font-size:13px;font-weight:500;color:var(--text);display:flex;gap:7px;align-items:center;}
+  .int-body{font-size:12px;color:var(--muted);line-height:1.6;margin-bottom:9px;}
+  .int-footer{display:flex;gap:7px;align-items:center;justify-content:space-between;}
+  .int-from{font-family:var(--mono);font-size:10px;color:var(--dim);}
+  .urg{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:10px;}
+  .urg-h{background:rgba(255,127,127,.15);color:var(--red);}
+  .urg-m{background:rgba(255,207,127,.15);color:var(--amber);}
+
+  /* MODALS */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:900;display:none;align-items:center;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--bg-panel);border:1px solid var(--border-hi);border-radius:var(--rl);padding:22px;width:460px;max-width:95vw;max-height:80vh;overflow-y:auto;}
+  .modal h2{font-family:var(--display);font-size:15px;font-weight:700;margin-bottom:14px;color:var(--accent);}
+  .fg{margin-bottom:12px;}
+  .fl{font-family:var(--mono);font-size:9px;letter-spacing:.08em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;display:block;}
+  .fi-input,.fi-select,.fi-ta{width:100%;background:var(--bg-card);border:1px solid var(--border-hi);border-radius:var(--r);padding:7px 11px;color:var(--text);font-family:var(--body);font-size:12px;outline:none;transition:border-color .15s;}
+  .fi-input:focus,.fi-select:focus,.fi-ta:focus{border-color:var(--accent);}
+  .fi-ta{min-height:75px;resize:vertical;}
+  .fi-select option{background:var(--bg-card);}
+  .modal-actions{display:flex;gap:7px;justify-content:flex-end;margin-top:15px;}
+  .btn-cancel{padding:6px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-size:11px;font-family:var(--mono);}
+  .btn-save{padding:6px 14px;border-radius:20px;border:1px solid rgba(127,255,178,.35);background:rgba(127,255,178,.08);color:var(--accent);cursor:pointer;font-size:11px;font-family:var(--mono);}
+
+  /* RUN AGENT MODAL */
+  .agent-picker{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin-bottom:12px;}
+  .ag-pick{padding:9px;border-radius:var(--r);border:1px solid var(--border-hi);background:var(--bg-card);cursor:pointer;text-align:center;transition:all .15s;}
+  .ag-pick:hover,.ag-pick.selected{border-color:var(--accent);background:rgba(127,255,178,.07);}
+  .ag-pick-emoji{font-size:18px;margin-bottom:3px;}
+  .ag-pick-name{font-family:var(--mono);font-size:9px;color:var(--muted);}
+
+  /* TOAST */
+  .toast{position:fixed;bottom:20px;right:20px;background:var(--bg-panel);border:1px solid var(--accent);border-radius:var(--r);padding:9px 14px;font-family:var(--mono);font-size:11px;color:var(--accent);z-index:9999;transform:translateY(50px);opacity:0;transition:all .25s;}
+  .toast.show{transform:translateY(0);opacity:1;}
+
+  /* LOADING */
+  .loading{text-align:center;padding:30px;color:var(--muted);font-family:var(--mono);font-size:12px;}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--border-hi);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-right:8px;vertical-align:middle;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;}
+  .feedback-grid{display:grid;grid-template-columns:1fr 1fr;gap:11px;}
+  .fb-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--rl);padding:13px 15px;}
+  .fb-title{font-size:12px;font-weight:500;color:var(--text);margin-bottom:9px;display:flex;gap:5px;align-items:center;}
+  .fb-row{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px;}
+  .fb-row:last-child{border:none;}
+  .fb-k{color:var(--muted);}
+  .fb-v{font-family:var(--mono);font-size:11px;}
+  .t-up{color:var(--accent);} .t-dn{color:var(--red);} .t-n{color:var(--muted);}
+
+  /* API config overlay */
+  .cfg-bar{background:rgba(255,127,127,.08);border:1px solid rgba(255,127,127,.2);border-radius:var(--r);padding:10px 14px;margin-bottom:16px;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--red);}
+  .cfg-bar input{flex:1;background:var(--bg-card);border:1px solid var(--border-hi);border-radius:var(--r);padding:5px 9px;color:var(--text);font-family:var(--mono);font-size:11px;outline:none;}
+  .cfg-bar input:focus{border-color:var(--accent);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo"><div class="logo-dot"></div>AXIS<span style="font-size:9px;font-weight:400;color:var(--muted);letter-spacing:.05em;font-family:var(--mono)">AI Company OS</span></div>
+  <div class="nav">
+    <button class="nav-btn active" onclick="showView('dashboard',this)">Dashboard</button>
+    <button class="nav-btn" onclick="showView('tasks',this)">Drafts</button>
+    <button class="nav-btn" onclick="showView('projects',this)">Projects</button>
+    <button class="nav-btn" onclick="showView('agents',this)">Agents</button>
+    <button class="nav-btn" onclick="showView('interventions',this)">Interventions</button>
+    <button class="nav-btn" onclick="showView('hurdles',this)">Hurdles</button>
+    <button class="nav-btn" onclick="showView('feedback',this)">Feedback</button>
+  </div>
+  <div class="topbar-r">
+    <div id="clock" style="font-size:10px;"></div>
+    <div class="api-pill" id="api-status-pill" onclick="openModal('api-config')" title="Click to configure">
+      <div class="s-dot" style="background:var(--red)"></div> API not set
+    </div>
+    <div class="status-pill"><div class="s-dot"></div>7 agents ready</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sb-section">
+      <div class="sb-label">Quick Access</div>
+      <div class="sb-item active" onclick="showView('dashboard')"><span>⬡</span>Overview</div>
+      <div class="sb-item" onclick="showView('tasks')"><span>✦</span>Drafts<span class="sb-badge" id="sb-drafts">0</span></div>
+      <div class="sb-item" onclick="showView('interventions')"><span>⚡</span>My Tasks<span class="sb-badge" id="sb-int">0</span></div>
+      <div class="sb-item" onclick="showView('hurdles')"><span>⚠</span>Hurdles<span class="sb-badge" id="sb-hur">0</span></div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">Agents</div>
+      <div id="agent-sb"></div>
+    </div>
+    <div class="sb-section">
+      <div class="sb-label">Projects</div>
+      <div id="proj-sb"></div>
+    </div>
+    <div class="sb-section" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px;">
+      <button class="btn btn-p" style="width:100%;text-align:center;padding:7px;" onclick="openModal('run-agent')">⚡ Run Agent</button>
+      <button class="btn" style="width:100%;text-align:center;padding:7px;margin-top:6px;" onclick="openModal('add-project')">+ Project</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="view active" id="view-dashboard">
+      <div id="api-warning" class="cfg-bar" style="display:none;">
+        ⚠ Backend not connected — <input id="api-url-input" placeholder="http://localhost:3001" />
+        <button class="btn btn-p" onclick="setApiUrl()">Connect</button>
+      </div>
+      <div class="stats" id="dash-stats">
+        <div class="stat"><div class="stat-top">Projects</div><div class="stat-val c-g" id="s-projects">–</div><div class="stat-sub">active</div></div>
+        <div class="stat"><div class="stat-top">Agents</div><div class="stat-val c-b">7</div><div class="stat-sub">all ready</div></div>
+        <div class="stat"><div class="stat-top">Drafts</div><div class="stat-val c-a" id="s-drafts">–</div><div class="stat-sub">awaiting review</div></div>
+        <div class="stat"><div class="stat-top">My Tasks</div><div class="stat-val c-r" id="s-int">–</div><div class="stat-sub">need you</div></div>
+        <div class="stat"><div class="stat-top">AI Cost</div><div class="stat-val" id="s-cost" style="font-size:18px;">–</div><div class="stat-sub">USD total</div></div>
+      </div>
+      <div class="two-col">
+        <div>
+          <div class="sh"><div class="st">Pending approvals</div><button class="btn" onclick="showView('tasks')">All drafts</button></div>
+          <div id="dash-tasks"></div>
+        </div>
+        <div>
+          <div class="sh"><div class="st">Agent activity</div></div>
+          <div class="feed" id="dash-feed"></div>
+        </div>
+      </div>
+      <div class="sh"><div class="st">Projects</div><button class="btn btn-p" onclick="openModal('add-project')">+ New</button></div>
+      <table class="tbl"><thead><tr><th>Project</th><th>Status</th><th>Agent</th><th>Progress</th><th>Next action</th></tr></thead>
+      <tbody id="dash-proj-body"></tbody></table>
+    </div>
+
+    <!-- DRAFTS (Semi-auto approval flow) -->
+    <div class="view" id="view-tasks">
+      <div class="sh">
+        <div class="st">Drafts awaiting your review</div>
+        <select class="fi-select" id="task-filter" onchange="loadTasks()" style="width:140px;font-size:11px;padding:4px 8px;">
+          <option value="draft_ready">Pending review</option>
+          <option value="approved">Approved</option>
+          <option value="rejected">Rejected</option>
+          <option value="">All tasks</option>
+        </select>
+      </div>
+      <div id="tasks-list"><div class="loading"><span class="spinner"></span>Loading...</div></div>
+    </div>
+
+    <!-- PROJECTS -->
+    <div class="view" id="view-projects">
+      <div class="sh"><div class="st">All projects</div><button class="btn btn-p" onclick="openModal('add-project')">+ New project</button></div>
+      <table class="tbl"><thead><tr><th>Project</th><th>Status</th><th>Lead agent</th><th>Progress</th><th>Revenue model</th><th>Next action</th><th></th></tr></thead>
+      <tbody id="all-proj-body"></tbody></table>
+    </div>
+
+    <!-- AGENTS -->
+    <div class="view" id="view-agents">
+      <div class="sh"><div class="st">AI Agent team</div><button class="btn btn-p" onclick="openModal('run-agent')">⚡ Run an agent</button></div>
+      <div class="ag-grid" id="agents-grid"></div>
+    </div>
+
+    <!-- INTERVENTIONS -->
+    <div class="view" id="view-interventions">
+      <div class="sh"><div class="st">Tasks needing you</div><button class="btn btn-p" onclick="openModal('add-int')">+ Add task</button></div>
+      <div id="int-list"><div class="loading"><span class="spinner"></span>Loading...</div></div>
+    </div>
+
+    <!-- HURDLES -->
+    <div class="view" id="view-hurdles">
+      <div class="sh"><div class="st">Active hurdles</div><button class="btn btn-p" onclick="openModal('add-hurdle')">+ Report hurdle</button></div>
+      <div id="hurdle-list"><div class="loading"><span class="spinner"></span>Loading...</div></div>
+    </div>
+
+    <!-- FEEDBACK -->
+    <div class="view" id="view-feedback">
+      <div class="sh"><div class="st">Feedback & improvement loops</div></div>
+      <div class="feedback-grid" id="fb-grid"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal-overlay" id="modal-run-agent">
+  <div class="modal">
+    <h2>⚡ Run an Agent</h2>
+    <div class="fg"><label class="fl">Select Agent</label>
+      <div class="agent-picker" id="agent-picker"></div>
+    </div>
+    <div class="fg"><label class="fl">Project (optional)</label>
+      <select class="fi-select" id="ra-project"><option value="">— No project —</option></select>
+    </div>
+    <div class="fg"><label class="fl">Task type / name</label>
+      <input class="fi-input" id="ra-type" placeholder="e.g. write_ebook_chapter_1" />
+    </div>
+    <div class="fg"><label class="fl">Your prompt / instructions</label>
+      <textarea class="fi-ta" id="ra-prompt" rows="5" placeholder="Tell the agent exactly what to do. Be specific about format, length, audience..."></textarea>
+    </div>
+    <div style="font-size:11px;color:var(--muted);padding:8px 10px;background:var(--bg-hover);border-radius:var(--r);">
+      Agent will draft a response → you review → approve or request changes → done.
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('run-agent')">Cancel</button>
+      <button class="btn-save" onclick="runAgent()">Run agent ↗</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-project">
+  <div class="modal">
+    <h2>+ New Project</h2>
+    <div class="fg"><label class="fl">Project name</label><input class="fi-input" id="np-name" placeholder="e.g. Etsy Wedding Templates Store" /></div>
+    <div class="fg"><label class="fl">Description</label><textarea class="fi-ta" id="np-desc" rows="2"></textarea></div>
+    <div class="fg"><label class="fl">Revenue model</label><input class="fi-input" id="np-rev" placeholder="e.g. Etsy per-sale royalties" /></div>
+    <div class="fg"><label class="fl">Lead agent</label>
+      <select class="fi-select" id="np-agent">
+        <option value="CREO">✍️ CREO — Content</option>
+        <option value="VISU">🎨 VISU — Design</option>
+        <option value="GRWTH">📈 GRWTH — Growth</option>
+        <option value="STRAT">🧠 STRAT — Strategy</option>
+        <option value="OPSY">🔧 OPSY — Operations</option>
+        <option value="DEVI">⚙️ DEVI — Tech</option>
+      </select>
+    </div>
+    <div class="fg"><label class="fl">First next action</label><input class="fi-input" id="np-next" placeholder="e.g. Validate niche with STRAT" /></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('add-project')">Cancel</button>
+      <button class="btn-save" onclick="addProject()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-int">
+  <div class="modal">
+    <h2>⚡ Add manual task</h2>
+    <div class="fg"><label class="fl">What needs doing</label><input class="fi-input" id="ni-title" /></div>
+    <div class="fg"><label class="fl">Details</label><textarea class="fi-ta" id="ni-body" rows="3"></textarea></div>
+    <div class="fg"><label class="fl">Urgency</label>
+      <select class="fi-select" id="ni-urg">
+        <option value="high">High — blocks progress</option>
+        <option value="med">Medium</option>
+        <option value="low">Low</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('add-int')">Cancel</button>
+      <button class="btn-save" onclick="addIntervention()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-add-hurdle">
+  <div class="modal">
+    <h2>⚠ Report hurdle</h2>
+    <div class="fg"><label class="fl">Title</label><input class="fi-input" id="nh-title" /></div>
+    <div class="fg"><label class="fl">Description</label><textarea class="fi-ta" id="nh-body" rows="3"></textarea></div>
+    <div class="fg"><label class="fl">Severity</label>
+      <select class="fi-select" id="nh-sev">
+        <option value="critical">Critical</option>
+        <option value="high">High</option>
+        <option value="med">Medium</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('add-hurdle')">Cancel</button>
+      <button class="btn-save" onclick="addHurdle()">Log it</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-api-config">
+  <div class="modal">
+    <h2>🔌 Connect to AXIS backend</h2>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px;line-height:1.6;">
+      Enter the URL of your running AXIS backend server. When running locally: <code style="color:var(--accent)">http://localhost:3001</code>. When deployed: your Render/Railway URL.
+    </div>
+    <div class="fg"><label class="fl">Backend API URL</label>
+      <input class="fi-input" id="cfg-url" placeholder="http://localhost:3001" />
+    </div>
+    <div id="cfg-test-result" style="font-size:11px;font-family:var(--mono);margin-top:8px;min-height:18px;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeModal('api-config')">Cancel</button>
+      <button class="btn-save" onclick="testAndSaveApi()">Test & Connect</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ──
+const AGENTS_LOCAL = {
+  STRAT:{id:'STRAT',name:'Chief Strategist',emoji:'🧠',model:'claude-opus-4-5',color:'ag-g',tasks:'Market research, niche validation, project prioritization'},
+  CREO:{id:'CREO',name:'Content Director',emoji:'✍️',model:'claude-sonnet-4-6',color:'ag-b',tasks:'Ebook chapters, YouTube scripts, blog posts, newsletters'},
+  VISU:{id:'VISU',name:'Design Agent',emoji:'🎨',model:'claude-sonnet-4-6',color:'ag-a',tasks:'Midjourney prompts, design briefs, color palettes, asset specs'},
+  GRWTH:{id:'GRWTH',name:'Growth Agent',emoji:'📈',model:'claude-haiku-4-5-20251001',color:'ag-g',tasks:'SEO, Etsy tags, YouTube optimization, affiliate research'},
+  OPSY:{id:'OPSY',name:'Operations',emoji:'🔧',model:'claude-haiku-4-5-20251001',color:'ag-a',tasks:'Platform listings, scheduling, publishing workflows'},
+  FINU:{id:'FINU',name:'Finance Tracker',emoji:'💰',model:'claude-haiku-4-5-20251001',color:'ag-r',tasks:'P&L summaries, cost tracking, revenue analytics'},
+  DEVI:{id:'DEVI',name:'Tech Builder',emoji:'⚙️',model:'claude-opus-4-5',color:'ag-b',tasks:'Code, automation scripts, API integrations, n8n workflows'}
+};
+
+let API_BASE = localStorage.getItem('axis_api_url') || '';
+let selectedAgent = null;
+
+// ── API ──
+async function api(path, method='GET', body=null) {
+  if (!API_BASE) throw new Error('NO_API');
+  const opts = { method, headers:{'Content-Type':'application/json'} };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(API_BASE + path, opts);
+  if (!r.ok) { const e = await r.json(); throw new Error(e.error || r.statusText); }
+  return r.json();
+}
+
+// ── INIT ──
+async function init() {
+  renderAgentSidebar();
+  renderAgents();
+  renderFeedback();
+  if (API_BASE) {
+    updateApiStatus(true);
+    await loadDashboard();
+  } else {
+    updateApiStatus(false);
+    document.getElementById('api-warning').style.display = 'flex';
+    renderOfflineState();
+  }
+  setInterval(updateClock, 1000); updateClock();
+}
+
+function updateApiStatus(connected) {
+  const pill = document.getElementById('api-status-pill');
+  pill.className = 'api-pill ' + (connected ? 'connected' : 'disconnected');
+  pill.innerHTML = `<div class="s-dot" style="background:${connected?'var(--accent)':'var(--red)'}"></div> ${connected ? 'API connected' : 'API not set'}`;
+}
+
+function renderOfflineState() {
+  ['dash-tasks','dash-feed','dash-proj-body'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<tr><td colspan="5" style="color:var(--muted);font-size:12px;padding:20px;text-align:center;">Connect backend to load data</td></tr>';
+  });
+  ['s-projects','s-drafts','s-int','s-cost'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '–';
+  });
+}
+
+// ── DASHBOARD ──
+async function loadDashboard() {
+  try {
+    const data = await api('/api/dashboard');
+    // Stats
+    const activeProj = (data.projects.find(p=>p.status==='active')||{count:0}).count;
+    const drafts = (data.tasks.find(t=>t.status==='draft_ready')||{count:0}).count;
+    document.getElementById('s-projects').textContent = activeProj;
+    document.getElementById('s-drafts').textContent   = drafts;
+    document.getElementById('s-int').textContent      = data.interventions;
+    document.getElementById('s-cost').textContent     = '$' + parseFloat(data.total_ai_cost).toFixed(3);
+    document.getElementById('sb-drafts').textContent  = drafts;
+    document.getElementById('sb-int').textContent     = data.interventions;
+    document.getElementById('sb-hur').textContent     = data.hurdles;
+
+    // Activity feed
+    const feedEl = document.getElementById('dash-feed');
+    feedEl.innerHTML = data.activity.slice(0,5).map(a => {
+      const type = a.event_type==='draft_ready'?'info':a.event_type==='error'?'alert':'success';
+      const icon = a.event_type==='draft_ready'?'✦':a.event_type==='error'?'!':'✓';
+      return `<div class="fi ${type}"><div class="fi-icon">${icon}</div>
+        <div class="fi-body"><div class="fi-title">${a.message}</div>
+        <div class="fi-meta">${a.agent_id||'system'} · ${timeAgo(a.created_at)}${a.project_name?' · '+a.project_name:''}</div>
+        </div></div>`;
+    }).join('') || '<div style="color:var(--muted);font-size:12px;padding:12px;">No activity yet — run an agent to start</div>';
+
+    // Draft tasks
+    const tasksData = await api('/api/tasks?status=draft_ready');
+    renderTaskCards(tasksData.slice(0,2), 'dash-tasks');
+
+    // Projects
+    const projData = await api('/api/projects');
+    renderProjTable(projData, 'dash-proj-body', false);
+    renderProjSidebar(projData);
+  } catch(e) {
+    if (e.message !== 'NO_API') toast('Error loading dashboard: ' + e.message);
+  }
+}
+
+// ── TASKS (draft approval) ──
+async function loadTasks() {
+  document.getElementById('tasks-list').innerHTML = '<div class="loading"><span class="spinner"></span>Loading drafts...</div>';
+  try {
+    const status = document.getElementById('task-filter').value;
+    const data = await api('/api/tasks' + (status ? '?status='+status : ''));
+    renderTaskCards(data, 'tasks-list');
+  } catch(e) { document.getElementById('tasks-list').innerHTML = '<div class="loading">Failed to load</div>'; }
+}
+
+function renderTaskCards(tasks, containerId) {
+  const el = document.getElementById(containerId);
+  if (!tasks.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:16px;text-align:center;">No drafts in this state</div>';
+    return;
+  }
+  el.innerHTML = tasks.map(t => {
+    const ag = AGENTS_LOCAL[t.agent_id] || {emoji:'?',name:t.agent_id};
+    const statusColor = {draft_ready:'c-a',approved:'c-g',rejected:'c-r'}[t.status]||'';
+    return `<div class="task-card ${t.status}" id="tc-${t.id}">
+      <div class="task-hdr">
+        <div class="task-title">${ag.emoji} ${ag.name} — <span class="${statusColor}" style="font-size:11px;font-family:var(--mono)">${t.task_type||'task'}</span></div>
+        <span class="tag ${t.status==='draft_ready'?'t-p':t.status==='approved'?'t-a':'t-b'}">${t.status}</span>
+      </div>
+      <div class="task-meta">
+        <span>Tokens: ${t.tokens_used||0}</span>
+        <span>Cost: $${parseFloat(t.cost_usd||0).toFixed(5)}</span>
+        <span>Model: ${t.ai_model||'—'}</span>
+        ${t.project_name ? '<span>Project: '+t.project_name+'</span>' : ''}
+      </div>
+      ${t.ai_draft ? `<div class="task-draft">${escHtml(t.ai_draft)}</div>` : ''}
+      ${t.status === 'draft_ready' ? `
+      <div class="task-actions">
+        <button class="btn btn-approve" onclick="approveTask('${t.id}')">✓ Approve</button>
+        <input class="feedback-input" id="fb-${t.id}" placeholder="Feedback for revision (optional)..." />
+        <button class="btn btn-reject" onclick="rejectTask('${t.id}')">✗ Reject</button>
+        <button class="btn" onclick="redoTask('${t.id}')">↺ Redo with feedback</button>
+      </div>` : t.your_feedback ? `<div style="font-size:11px;color:var(--muted);margin-top:7px;padding-top:7px;border-top:1px solid var(--border)">Your feedback: ${escHtml(t.your_feedback)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function approveTask(id) {
+  try {
+    await api(`/api/tasks/${id}/approve`, 'POST', { feedback: document.getElementById('fb-'+id)?.value || '' });
+    toast('Draft approved ✓'); loadDashboard(); if(document.getElementById('view-tasks').classList.contains('active')) loadTasks();
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+async function rejectTask(id) {
+  const fb = document.getElementById('fb-'+id)?.value;
+  if (!fb) { toast('Add feedback before rejecting'); return; }
+  try {
+    await api(`/api/tasks/${id}/reject`, 'POST', { feedback: fb });
+    toast('Rejected with feedback'); loadTasks();
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+async function redoTask(id) {
+  const fb = document.getElementById('fb-'+id)?.value;
+  if (!fb) { toast('Add feedback before requesting redo'); return; }
+  toast('Agent redrafting...'); document.getElementById(`tc-${id}`).style.opacity = '0.5';
+  try {
+    await api(`/api/tasks/${id}/redo`, 'POST', { feedback: fb });
+    toast('Revised draft ready ✓'); loadTasks();
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
+// ── RUN AGENT ──
+async function runAgent() {
+  if (!selectedAgent) { toast('Select an agent first'); return; }
+  const prompt = document.getElementById('ra-prompt').value.trim();
+  if (!prompt) { toast('Enter a prompt'); return; }
+  const proj = document.getElementById('ra-project').value;
+  const type = document.getElementById('ra-type').value || 'custom';
+  closeModal('run-agent');
+  toast(`Running ${selectedAgent}... this takes 10–30s`);
+  try {
+    await api('/api/tasks/run', 'POST', {
+      project_id: proj || null, agent_id: selectedAgent,
+      task_type: type, prompt
+    });
+    toast(`${selectedAgent} draft ready — check Drafts tab ✦`);
+    loadDashboard();
+  } catch(e) { toast('Agent error: ' + e.message); }
+}
+
+// ── PROJECTS ──
+async function loadProjects() {
+  try {
+    const data = await api('/api/projects');
+    renderProjTable(data, 'all-proj-body', true);
+  } catch(e) {}
+}
+
+function renderProjTable(projs, tbodyId, extended) {
+  const el = document.getElementById(tbodyId);
+  if (!projs.length) { el.innerHTML = `<tr><td colspan="7" style="color:var(--muted);font-size:12px;padding:20px;text-align:center;">No projects yet</td></tr>`; return; }
+  const sc = {active:'t-a',paused:'t-p',planning:'t-pl',blocked:'t-b'};
+  el.innerHTML = projs.map(p => {
+    const ag = AGENTS_LOCAL[p.lead_agent]||{emoji:'?'};
+    return `<tr>
+      <td><div class="pn">${p.name}</div><div class="pd">${p.description||''}</div></td>
+      <td><span class="tag ${sc[p.status]||'t-pl'}">${p.status}</span></td>
+      <td>${ag.emoji} <span style="font-size:11px;color:var(--muted)">${p.lead_agent||'—'}</span></td>
+      <td style="min-width:90px"><div style="display:flex;align-items:center;gap:6px"><div class="pb-o" style="width:70px"><div class="pb-i" style="width:${p.progress||0}%"></div></div><span style="font-family:var(--mono);font-size:10px;color:var(--muted)">${p.progress||0}%</span></div></td>
+      ${extended ? `<td style="font-size:11px;color:var(--muted)">${p.revenue_model||'—'}</td>` : ''}
+      <td style="font-size:11px;color:var(--muted);max-width:160px">${p.next_action||'—'}</td>
+      ${extended ? `<td><button class="btn" onclick="deleteProject('${p.id}')">Remove</button></td>` : ''}
+    </tr>`;
+  }).join('');
+}
+
+function renderProjSidebar(projs) {
+  const el = document.getElementById('proj-sb');
+  el.innerHTML = (projs||[]).map(p => `
+    <div class="sb-item" onclick="showView('projects')"><span>◈</span>${p.name.length>16?p.name.slice(0,16)+'…':p.name}</div>`).join('');
+}
+
+async function addProject() {
+  const name = document.getElementById('np-name').value.trim();
+  if (!name) { toast('Name required'); return; }
+  try {
+    await api('/api/projects','POST',{
+      name, description:document.getElementById('np-desc').value,
+      revenue_model:document.getElementById('np-rev').value,
+      lead_agent:document.getElementById('np-agent').value,
+      next_action:document.getElementById('np-next').value
+    });
+    closeModal('add-project'); toast('Project created'); loadDashboard();
+  } catch(e) { toast('Error: '+e.message); }
+}
+
+async function deleteProject(id) {
+  if (!confirm('Delete project?')) return;
+  try { await api('/api/projects/'+id,'DELETE'); toast('Removed'); loadProjects(); } catch(e) {}
+}
+
+// ── INTERVENTIONS ──
+async function loadInterventions() {
+  try {
+    const data = await api('/api/interventions');
+    document.getElementById('sb-int').textContent = data.length;
+    const el = document.getElementById('int-list');
+    el.innerHTML = data.length ? data.map(i => `
+      <div class="int-card ${i.urgency==='med'?'amber':''}">
+        <div class="int-hdr">
+          <div class="int-title">${i.title}<span class="urg ${i.urgency==='high'?'urg-h':'urg-m'}">${i.urgency.toUpperCase()}</span></div>
+        </div>
+        <div class="int-body">${i.description||''}</div>
+        <div class="int-footer">
+          <span class="int-from">Agent: ${i.agent_id||'manual'}</span>
+          <button class="btn" onclick="doneInt('${i.id}')">✓ Done</button>
+        </div>
+      </div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">🎉 All clear</div>';
+  } catch(e) {}
+}
+
+async function addIntervention() {
+  const title = document.getElementById('ni-title').value.trim();
+  if (!title) return;
+  try {
+    await api('/api/interventions','POST',{title,description:document.getElementById('ni-body').value,urgency:document.getElementById('ni-urg').value});
+    closeModal('add-int'); toast('Task added'); loadInterventions();
+  } catch(e) {}
+}
+
+async function doneInt(id) {
+  try { await api(`/api/interventions/${id}/done`,'POST'); toast('Done ✓'); loadInterventions(); } catch(e) {}
+}
+
+// ── HURDLES ──
+async function loadHurdles() {
+  try {
+    const data = await api('/api/hurdles');
+    document.getElementById('sb-hur').textContent = data.length;
+    const sc = {critical:'t-b',high:'t-p',med:'t-pl'};
+    const el = document.getElementById('hurdle-list');
+    el.innerHTML = data.length ? data.map(h => `
+      <div class="int-card">
+        <div class="int-hdr"><div class="int-title">${h.title}<span class="tag ${sc[h.severity]}">${h.severity}</span></div></div>
+        <div class="int-body">${h.description||''}</div>
+        <div class="int-footer">
+          <span class="int-from">${h.project_name||'General'}</span>
+          <button class="btn" onclick="resolveHurdle('${h.id}')">Resolved</button>
+        </div>
+      </div>`).join('')
+    : '<div style="color:var(--muted);font-size:13px;padding:20px;text-align:center">No active hurdles</div>';
+  } catch(e) {}
+}
+
+async function addHurdle() {
+  const title = document.getElementById('nh-title').value.trim(); if (!title) return;
+  try {
+    await api('/api/hurdles','POST',{title,description:document.getElementById('nh-body').value,severity:document.getElementById('nh-sev').value});
+    closeModal('add-hurdle'); toast('Hurdle logged'); loadHurdles();
+  } catch(e) {}
+}
+
+async function resolveHurdle(id) {
+  try { await api(`/api/hurdles/${id}/resolve`,'POST'); toast('Resolved'); loadHurdles(); } catch(e) {}
+}
+
+// ── AGENTS GRID ──
+function renderAgents() {
+  const el = document.getElementById('agents-grid');
+  el.innerHTML = Object.values(AGENTS_LOCAL).map(a => `
+    <div class="ag-card ${a.color}">
+      <div class="ag-avatar">${a.emoji}</div>
+      <div class="ag-name">${a.name}</div>
+      <div class="ag-role">${a.id}</div>
+      <div class="ag-tasks">${a.tasks}</div>
+      <div class="ag-model">Model: ${a.model}</div>
+      <div class="ag-run-btn">
+        <button class="btn btn-p" style="width:100%;font-size:10px;padding:6px;" onclick="quickRunAgent('${a.id}')">⚡ Run ${a.id}</button>
+      </div>
+    </div>`).join('');
+}
+
+function quickRunAgent(agentId) {
+  selectedAgent = agentId;
+  openModal('run-agent');
+  document.querySelectorAll('.ag-pick').forEach(b => b.classList.remove('selected'));
+  document.getElementById('ap-'+agentId)?.classList.add('selected');
+}
+
+function renderAgentSidebar() {
+  const el = document.getElementById('agent-sb');
+  el.innerHTML = Object.values(AGENTS_LOCAL).map(a => `
+    <div class="sb-item" onclick="showView('agents')"><span>${a.emoji}</span>${a.id}<span class="sb-badge g" style="font-size:8px">ready</span></div>`).join('');
+}
+
+function renderAgentPicker() {
+  const el = document.getElementById('agent-picker');
+  el.innerHTML = Object.values(AGENTS_LOCAL).map(a => `
+    <div class="ag-pick" id="ap-${a.id}" onclick="pickAgent('${a.id}',this)">
+      <div class="ag-pick-emoji">${a.emoji}</div>
+      <div class="ag-pick-name">${a.id}</div>
+    </div>`).join('');
+}
+
+function pickAgent(id, el) {
+  selectedAgent = id;
+  document.querySelectorAll('.ag-pick').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ── FEEDBACK ──
+function renderFeedback() {
+  const loops = [
+    {title:'Content output',items:[{k:'Drafts this week',v:'—',t:'n'},{k:'Approved / rejected',v:'—',t:'n'},{k:'Avg token cost',v:'—',t:'n'},{k:'CREO output quality',v:'—',t:'n'}]},
+    {title:'Operations health',items:[{k:'Agent tasks run',v:'—',t:'n'},{k:'Avg completion time',v:'—',t:'n'},{k:'Manual interventions',v:'—',t:'n'},{k:'Redo requests',v:'—',t:'n'}]},
+    {title:'Revenue pipeline',items:[{k:'Total revenue',v:'₹0',t:'n'},{k:'Pipeline value',v:'₹12,000',t:'up'},{k:'Monthly AI cost',v:'—',t:'n'},{k:'Break-even target',v:'₹3,200/mo',t:'n'}]},
+    {title:'Iteration velocity',items:[{k:'Projects active',v:'—',t:'n'},{k:'Tasks completed',v:'—',t:'n'},{k:'Feedback cycles',v:'—',t:'n'},{k:'Agent utilization',v:'—',t:'n'}]}
+  ];
+  document.getElementById('fb-grid').innerHTML = loops.map(l => `
+    <div class="fb-card"><div class="fb-title">🔁 ${l.title}</div>
+    ${l.items.map(i=>`<div class="fb-row"><span class="fb-k">${i.k}</span><span class="fb-v ${i.t==='up'?'t-up':i.t==='dn'?'t-dn':'t-n'}">${i.v} ${i.t==='up'?'↑':i.t==='dn'?'↓':'→'}</span></div>`).join('')}
+    </div>`).join('');
+}
+
+// ── API CONFIG ──
+async function testAndSaveApi() {
+  const url = document.getElementById('cfg-url').value.trim().replace(/\/$/, '');
+  document.getElementById('cfg-test-result').textContent = 'Testing...';
+  try {
+    const r = await fetch(url + '/health');
+    const data = await r.json();
+    if (data.status === 'ok') {
+      API_BASE = url; localStorage.setItem('axis_api_url', url);
+      updateApiStatus(true); document.getElementById('api-warning').style.display = 'none';
+      document.getElementById('cfg-test-result').textContent = '✓ Connected — agents: ' + data.agents.join(', ');
+      setTimeout(() => { closeModal('api-config'); loadDashboard(); }, 1000);
+    }
+  } catch(e) {
+    document.getElementById('cfg-test-result').textContent = '✗ Failed — is the backend running?';
+  }
+}
+
+function setApiUrl() {
+  const url = document.getElementById('api-url-input').value.trim();
+  document.getElementById('cfg-url').value = url;
+  testAndSaveApi();
+}
+
+// ── NAV ──
+function showView(id, navBtn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-'+id)?.classList.add('active');
+  if (navBtn) { document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active')); navBtn.classList.add('active'); }
+  if (id==='tasks') loadTasks();
+  if (id==='projects') loadProjects();
+  if (id==='interventions') loadInterventions();
+  if (id==='hurdles') loadHurdles();
+}
+
+// ── MODALS ──
+function openModal(id) {
+  if (id === 'run-agent') {
+    renderAgentPicker();
+    selectedAgent = null;
+    // Populate project dropdown
+    api('/api/projects').then(projs => {
+      const sel = document.getElementById('ra-project');
+      sel.innerHTML = '<option value="">— No project —</option>' + projs.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+    }).catch(()=>{});
+  }
+  document.getElementById('modal-'+id)?.classList.add('open');
+}
+function closeModal(id) { document.getElementById('modal-'+id)?.classList.remove('open'); }
+
+// ── UTILS ──
+function toast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg;
+  t.classList.add('show'); setTimeout(() => t.classList.remove('show'), 3000);
+}
+function timeAgo(ts) {
+  if (!ts) return ''; const s = Math.floor((Date.now() - new Date(ts)) / 1000);
+  if (s < 60) return s + 's ago'; if (s < 3600) return Math.floor(s/60) + 'm ago';
+  if (s < 86400) return Math.floor(s/3600) + 'h ago'; return Math.floor(s/86400) + 'd ago';
+}
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function updateClock() { const el = document.getElementById('clock'); if(el) el.textContent = new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'}); }
+document.querySelectorAll('.modal-overlay').forEach(o => o.addEventListener('click', e => { if(e.target===o) o.classList.remove('open'); }));
+
+if (API_BASE) document.getElementById('cfg-url').value = API_BASE;
+init();
+</script>
+</body>
+</html>

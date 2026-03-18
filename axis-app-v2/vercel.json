@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "name": "axis-ai-company-os",
+  "builds": [
+    { "src": "api/server.js", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/api/(.*)", "dest": "api/server.js" },
+    { "src": "/health",   "dest": "api/server.js" }
+  ],
+  "env": {
+    "ANTHROPIC_API_KEY": "@anthropic_api_key",
+    "DATABASE_URL":      "@database_url",
+    "JWT_SECRET":        "@jwt_secret",
+    "NODE_ENV":          "production"
+  }
+}
